@@ -98,12 +98,13 @@ If the value is valid and meaningful, return valid: true with empty issues array
 
   parseLLMResponse(content) {
     try {
+      if (!content || typeof content !== 'string') return null;
       // Remove markdown code blocks if present
       let jsonStr = content.trim();
       if (jsonStr.startsWith('```json')) {
-        jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+        jsonStr = jsonStr.replace(/^```json\n?/i, '').replace(/\n?```\s*$/g, '').trim();
       } else if (jsonStr.startsWith('```')) {
-        jsonStr = jsonStr.replace(/```\n?/g, '');
+        jsonStr = jsonStr.replace(/^```\n?/, '').replace(/\n?```\s*$/g, '').trim();
       }
 
       const parsed = JSON.parse(jsonStr);

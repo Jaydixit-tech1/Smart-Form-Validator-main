@@ -2,6 +2,16 @@ import React from 'react';
 import './ValidationResults.css';
 
 function ValidationResults({ result }) {
+  if (!result || typeof result !== 'object') {
+    return (
+      <div className="validation-results">
+        <p>No validation results to display.</p>
+      </div>
+    );
+  }
+
+  const confidencePct = Math.max(0, Math.min(100, Number(result.confidence_score) || 0));
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'VALID':
@@ -38,9 +48,9 @@ function ValidationResults({ result }) {
     <div className="validation-results">
       <div className="results-header">
         <h2>Validation Results</h2>
-        <div className="overall-status" style={{ color: getStatusColor(result.overall_status) }}>
-          <span className="status-icon">{getStatusIcon(result.overall_status)}</span>
-          <span className="status-text">{result.overall_status}</span>
+        <div className="overall-status" style={{ color: getStatusColor(result.overall_status || '') }}>
+          <span className="status-icon">{getStatusIcon(result.overall_status || '')}</span>
+          <span className="status-text">{result.overall_status || 'UNKNOWN'}</span>
         </div>
       </div>
 
@@ -50,11 +60,11 @@ function ValidationResults({ result }) {
           <div
             className="score-bar"
             style={{
-              width: `${result.confidence_score}%`,
-              backgroundColor: getConfidenceColor(result.confidence_score)
+              width: `${confidencePct}%`,
+              backgroundColor: getConfidenceColor(confidencePct)
             }}
           />
-          <span className="score-value">{result.confidence_score}%</span>
+          <span className="score-value">{confidencePct}%</span>
         </div>
       </div>
 
@@ -64,7 +74,16 @@ function ValidationResults({ result }) {
           <ul>
             {result.security_warnings.map((warning, index) => (
               <li key={index}>
-                <strong>{warning.field}:</strong> {warning.threat} - {warning.message}
+                {typeof warning === 'string'
+                  ? warning
+                  : (
+                      <>
+                        {warning.field && <strong>{warning.field}:</strong>}
+                        {warning.field && ' '}
+                        {warning.threat && `${warning.threat} - `}
+                        {warning.message || ''}
+                      </>
+                    )}
               </li>
             ))}
           </ul>
@@ -73,37 +92,42 @@ function ValidationResults({ result }) {
 
       <div className="field-results">
         <h3>Field Details</h3>
-        {Object.entries(result.fields).map(([fieldName, fieldResult]) => (
+        {Object.entries(result.fields || {}).map(([fieldName, fieldResult]) => {
+          const status = fieldResult?.status ?? '';
+          const issues = Array.isArray(fieldResult?.issues) ? fieldResult.issues : [];
+          const suggested = fieldResult?.suggested_value;
+          return (
           <div key={fieldName} className="field-result">
             <div className="field-header">
               <span className="field-name">{fieldName}</span>
               <span
                 className="field-status"
-                style={{ color: getStatusColor(fieldResult.status) }}
+                style={{ color: getStatusColor(status) }}
               >
-                {getStatusIcon(fieldResult.status)} {fieldResult.status}
+                {getStatusIcon(status)} {status || 'UNKNOWN'}
               </span>
             </div>
 
-            {fieldResult.issues && fieldResult.issues.length > 0 && (
+            {issues.length > 0 && (
               <div className="field-issues">
                 <strong>Issues:</strong>
                 <ul>
-                  {fieldResult.issues.map((issue, index) => (
-                    <li key={index}>{issue}</li>
+                  {issues.map((issue, index) => (
+                    <li key={index}>{typeof issue === 'string' ? issue : String(issue)}</li>
                   ))}
                 </ul>
               </div>
             )}
 
-            {fieldResult.suggested_value && fieldResult.suggested_value.trim() !== '' && (
+            {suggested != null && String(suggested).trim() !== '' && (
               <div className="field-suggestion">
                 <strong>Suggested Value:</strong>
-                <div className="suggested-value">{fieldResult.suggested_value}</div>
+                <div className="suggested-value">{String(suggested)}</div>
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
